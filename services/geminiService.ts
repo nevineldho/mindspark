@@ -7,6 +7,36 @@ const ai = new GoogleGenAI({ apiKey });
 // Helper to validate API Key availability
 export const hasApiKey = (): boolean => !!apiKey;
 
+// Helper to clean JSON string from Markdown or extra text
+const cleanJson = (text: string): string => {
+  // Remove markdown code blocks
+  let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+  
+  // Find start and end of JSON structure
+  const firstBrace = clean.indexOf('{');
+  const firstBracket = clean.indexOf('[');
+  
+  let start = 0;
+  let end = -1;
+
+  // Determine if we are looking for an object or an array based on which comes first
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    // It's an object
+    start = firstBrace;
+    end = clean.lastIndexOf('}');
+  } else if (firstBracket !== -1) {
+    // It's an array
+    start = firstBracket;
+    end = clean.lastIndexOf(']');
+  }
+
+  if (end !== -1) {
+    return clean.substring(start, end + 1);
+  }
+  
+  return clean;
+};
+
 const questionSchema: Schema = {
   type: Type.ARRAY,
   items: {
@@ -71,7 +101,13 @@ export const generateQuestions = async (): Promise<Question[]> => {
     });
 
     if (response.text) {
-      return JSON.parse(response.text) as Question[];
+      const cleaned = cleanJson(response.text);
+      try {
+        return JSON.parse(cleaned) as Question[];
+      } catch (e) {
+        console.error("Failed to parse Questions JSON:", cleaned);
+        throw e;
+      }
     }
     throw new Error("No data returned from Gemini");
   } catch (error) {
@@ -89,8 +125,9 @@ export const analyzePersonality = async (answers: UserAnswer[]): Promise<Persona
     
     Provide deep insights into their learning psychology, potential pitfalls, social dynamics, and ideal career paths.`;
 
+    // Using gemini-3-pro-preview for complex reasoning tasks as recommended
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -99,7 +136,13 @@ export const analyzePersonality = async (answers: UserAnswer[]): Promise<Persona
     });
 
     if (response.text) {
-      return JSON.parse(response.text) as PersonalityResult;
+      const cleaned = cleanJson(response.text);
+      try {
+        return JSON.parse(cleaned) as PersonalityResult;
+      } catch (e) {
+        console.error("Failed to parse Analysis JSON:", cleaned);
+        throw e;
+      }
     }
     throw new Error("No analysis returned from Gemini");
   } catch (error) {
