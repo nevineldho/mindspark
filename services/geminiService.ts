@@ -90,12 +90,11 @@ export const analyzePersonality = async (answers: UserAnswer[]): Promise<Persona
     Provide deep insights into their learning psychology, potential pitfalls, social dynamics, and ideal career paths.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', // Using Pro for better reasoning on the analysis
+      model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
-        thinkingConfig: { thinkingBudget: 1024 } // Allow some thinking for a better psychological profile
       }
     });
 
